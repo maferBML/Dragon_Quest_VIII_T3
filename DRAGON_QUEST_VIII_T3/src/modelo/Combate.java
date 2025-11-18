@@ -1,10 +1,7 @@
-package controlador;
-import java.util.*;
+package modelo;
 
-import modelo.Enemigo;
-import modelo.Estado;
-import modelo.Heroe;
-import modelo.Personaje;
+//import modelo.*;
+import java.util.*;
 
 public class Combate {
     private List<Heroe> heroes;
@@ -16,113 +13,12 @@ public class Combate {
         this.enemigos = enemigos;
     }
 
-    public void iniciar() {
-        System.out.println("=== ¡Comienza el combate, FIGHT! ===\n");
-        int turno = 1;
-        Scanner sc = new Scanner(System.in);
-
-        while (hayVivos(heroes) && hayVivos(enemigos)) {
-            System.out.println("---- Turno " + turno + " ----");
-            mostrarEstado();
-
-            System.out.print("\n¿Vas a continuar? (s/n): ");
-            String seguir = sc.next().toLowerCase();
-            if (seguir.equals("n")) {
-                System.out.println("\n¡COBARDE! ¡lOS ENEMIGOS GANARON!");
-            return;
-        }
-
-            List<Personaje> participantes = new ArrayList<>();
-            participantes.addAll(heroes);
-            participantes.addAll(enemigos);
-
-            // Se ordenan por velocidad (mayor primero)
-            participantes.sort((a, b) -> b.getVelocidad() - a.getVelocidad());
-
-            for (Personaje p : participantes) {
-                if (!p.estaVivo()) continue;
-
-                // Aplicar efectos de estado
-                if (p.getEstado() != null) {
-                    if (p.getEstado().getNombre().equals("Sueño")) {
-                        boolean despierta = random.nextBoolean();
-                        if (despierta) {
-                            System.out.println(p.getNombre() + " se desperto! :O");
-                            p.setEstado(null);
-                        } else {
-                            System.out.println(p.getNombre() + " sigue dormido y pierde el turno.");
-                            p.getEstado().reducirDuracion();
-                            if (p.getEstado().terminado()) {
-                                System.out.println(p.getNombre() + " ya no está " + p.getEstado().getNombre() + ".");
-                                p.setEstado(null);
-                            }
-                            continue;
-                        }
-                    } else {
-                        p.getEstado().aplicarEfecto(p);
-                        if (p.getEstado() != null && p.getEstado().terminado()) {
-                            System.out.println(p.getNombre() + " ya no está " + p.getEstado().getNombre() + ".");
-                            p.setEstado(null);
-                        }
-                    }
-                }
-
-                if (!p.estaVivo()) continue;
-
-                // Turno de los héroes
-                if (p instanceof Heroe) {
-                    Heroe heroe = (Heroe) p;
-
-                    System.out.println("\n==============================");
-                    System.out.println("     Turno de " + heroe.getNombre());
-                    System.out.println("==============================");
-                    boolean accionRealizada = false;
-
-while (!accionRealizada) {
-    System.out.println("1. Atacar");
-    System.out.println("2. Defender");
-    System.out.println("3. Usar Habilidad");
-    System.out.print("Elige una acción (1,2,3): ");
-    int opcion = sc.nextInt();
-
-    switch (opcion) {
-        case 1 -> {
-            Enemigo objetivo = elegirEnemigo();
-            if (objetivo != null) heroe.atacar(objetivo);
-            accionRealizada = true;
-        }
-        case 2 -> {
-            heroe.defender();
-            accionRealizada = true;
-        }
-        case 3 -> {
-            int mpAntes = heroe.getMagiaMp();
-            heroe.usarHabilidad((ArrayList<Heroe>) heroes, enemigos);
-
-            if (heroe.getMagiaMp() != mpAntes) accionRealizada = true;
-            else System.out.println("\nElige otra acción: ");
-        }
-        default -> System.out.println("\nQue fue eso?\n");
+    public boolean hayVivosHeroes() {
+        return hayVivos(heroes);
     }
-}
 
-
-                } 
-                // Turno de los enemigos
-                else if (p instanceof Enemigo) {
-                    Heroe objetivo = elegirHeroe();
-                    if (objetivo != null) ((Enemigo) p).accionAutomatica(objetivo);
-                }
-
-                if (!hayVivos(heroes) || !hayVivos(enemigos)) break;
-            }
-            turno++;
-        }
-
-        if (hayVivos(heroes))
-            System.out.println("¡GANASTE MASTER!");
-        else
-            System.out.println("¡Sos un malo!");
+    public boolean hayVivosEnemigos() {
+        return hayVivos(enemigos);
     }
 
     private boolean hayVivos(List<? extends Personaje> lista) {
@@ -130,53 +26,44 @@ while (!accionRealizada) {
         return false;
     }
 
-    private void mostrarEstado() {
-        System.out.println("\n Héroes:");
-        for (Heroe h : heroes) {
-            System.out.println("  " + h.getNombre() + " - HP: " + h.getVidaHp() + " MP: " + h.getMagiaMp() + estadoString(h.getEstado()));
-        }
+    public List<Personaje> ordenarPorVelocidad() {
+        List<Personaje> participantes = new ArrayList<>();
+        participantes.addAll(heroes);
+        participantes.addAll(enemigos);
 
-        System.out.println("\n Enemigos:");
-        for (int i = 0; i < enemigos.size(); i++) {
-            Enemigo e = enemigos.get(i);
-            if (e.estaVivo())
-                System.out.println("  [" + (i + 1) + "] " + e.getNombre() + " - HP: " + e.getVidaHp() + estadoString(e.getEstado()));
+        participantes.sort((a, b) -> b.getVelocidad() - a.getVelocidad());
+        return participantes;
+    }
+
+    public void aplicarEfectos(Personaje p) {
+        if (p.getEstado() != null) {
+            p.getEstado().aplicarEfecto(p);
+            if (p.getEstado().terminado()) {
+                p.setEstado(null);
+            }
         }
     }
 
-    private String estadoString(Estado est) {
-        if (est == null) return "";
-        return " [" + est.getNombre() + " (" + est.getDuracion() + ")]";
+    public void ejecutarAccion(Heroe h, int opcion, Enemigo objetivo) {
+        switch (opcion) {
+            case 1 -> h.atacar(objetivo);
+            case 2 -> h.defender();
+            case 3 -> h.usarHabilidad(new ArrayList<>(heroes), enemigos);  // ← CORRECCIÓN
+        }
     }
 
-    // 🔹 Elegir enemigo específico
-    private Enemigo elegirEnemigo() {
-        Scanner sc = new Scanner(System.in);
+    public Enemigo elegirEnemigo() {
         List<Enemigo> vivos = new ArrayList<>();
         for (Enemigo e : enemigos) if (e.estaVivo()) vivos.add(e);
-
-        if (vivos.isEmpty()) return null;
-
-        System.out.println("\nElige un enemigo para atacar:");
-        for (int i = 0; i < vivos.size(); i++) {
-            Enemigo e = vivos.get(i);
-            System.out.println((i + 1) + ". " + e.getNombre() + " (HP: " + e.getVidaHp() + ")");
-        }
-
-        System.out.print("Número del enemigo: ");
-        int eleccion = sc.nextInt();
-
-        if (eleccion < 1 || eleccion > vivos.size()) {
-            System.out.println("\nOpción inválida, se elige un enemigo al azar.");
-            return vivos.get(random.nextInt(vivos.size()));
-        }
-        return vivos.get(eleccion - 1);
+        return vivos.isEmpty() ? null : vivos.get(random.nextInt(vivos.size()));
     }
 
-    // 🔹 Elegir héroe al azar
-    private Heroe elegirHeroe() {
+    public Heroe elegirHeroe() {
         List<Heroe> vivos = new ArrayList<>();
         for (Heroe h : heroes) if (h.estaVivo()) vivos.add(h);
         return vivos.isEmpty() ? null : vivos.get(random.nextInt(vivos.size()));
     }
+
+    public List<Heroe> getHeroes() { return heroes; }
+    public List<Enemigo> getEnemigos() { return enemigos; }
 }

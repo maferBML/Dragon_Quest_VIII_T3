@@ -1,14 +1,17 @@
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
-import controlador.Combate;
 import modelo.Enemigo;
 import modelo.Habilidad;
 import modelo.Heroe;
+import modelo.Combate;
+import vista.VistaJuegoTerminal;
+import controlador.ControlJuego;
+
 public class App {
     public static void main(String[] args) {
+
         Heroe heroe1 = new Heroe("Héroe", 100, 30, 25, 10, 15);
         Heroe heroe2 = new Heroe("Yangus", 120, 20, 27, 12, 12);
         Heroe heroe3 = new Heroe("Jessica", 90, 50, 20, 8, 18);
@@ -27,7 +30,7 @@ public class App {
         heroes.add(heroe3);
         heroes.add(heroe4);
 
-        //enemigos
+        // enemigos
         Enemigo[] enemigosArr = {
             new Enemigo("Goblin", 70, 0, 20, 8, 10, "agresivo"),
             new Enemigo("Slime", 60, 0, 15, 5, 8, "agresivo"),
@@ -40,17 +43,17 @@ public class App {
 
         Enemigo elegido = enemigosArr[indiceMiniJefe];
         enemigosArr[indiceMiniJefe] = new Enemigo(
-            elegido.getNombre(), 
+            elegido.getNombre(),
             elegido.getVidaHp(),
-            elegido.getMagiaMp(), 
-            elegido.getAtaque(), 
+            elegido.getMagiaMp(),
+            elegido.getAtaque(),
             elegido.getDefensa(),
-            elegido.getVelocidad(), 
-            elegido.getTipo(), 
-            true 
+            elegido.getVelocidad(),
+            elegido.getTipo(),
+            true
         );
 
-        System.out.println("\n¡Un " + enemigosArr[indiceMiniJefe].getNombre().toUpperCase() + 
+        System.out.println("\n¡Un " + enemigosArr[indiceMiniJefe].getNombre().toUpperCase() +
                            " ha aparecido como JEFE (Cagaste)!");
         System.out.println("HP aumentado: " + enemigosArr[indiceMiniJefe].getVidaHp());
         System.out.println("Ataque aumentado: " + enemigosArr[indiceMiniJefe].getAtaque());
@@ -59,9 +62,11 @@ public class App {
 
         ArrayList<Enemigo> enemigos = new ArrayList<>(Arrays.asList(enemigosArr));
 
-        // pa iniciar
-        Combate combate = new Combate(heroes, enemigos);
-        combate.iniciar();
+        // === MVC ===
+        Combate modeloCombate = new Combate(heroes, enemigos);
+        VistaJuegoTerminal vista = new VistaJuegoTerminal();
+        ControlJuego controlador = new ControlJuego(modeloCombate, vista);
+
+        controlador.iniciar(); // ← ahora inicia el juego
     }
 }
-
