@@ -6,7 +6,6 @@ import java.util.Random;
 
 public class Heroe extends Personaje {
 
-    private static final Scanner sc = new Scanner(System.in); // ← CORRECCIÓN
     private ArrayList<Habilidad> habilidades = new ArrayList<>();
 
     public Heroe(String nombre, int vidaHp, int magiaMp, int ataque, int defensa, int velocidad) {
@@ -47,11 +46,14 @@ public class Heroe extends Personaje {
         System.out.println(this.getNombre() + " se cura " + cantidad + " puntos de vida. Vida actual: " + this.getVidaHp());
     }
 
+    // versión mejorada para elegir a quién curar o atacar
     public void usarHabilidad(ArrayList<Heroe> heroes, List<Enemigo> enemigos) {
         if (habilidades.isEmpty()) {
             System.out.println(getNombre() + " no tiene habilidades.");
             return;
         }
+
+        Scanner sc = new Scanner(System.in);
 
         System.out.println("\nHabilidades disponibles:");
         for (int i = 0; i < habilidades.size(); i++) {
@@ -118,7 +120,9 @@ public class Heroe extends Personaje {
         }
     }
 
+    // elegir enemigo desde aqui
     private Enemigo elegirEnemigo(List<Enemigo> enemigos) {
+        Scanner sc = new Scanner(System.in);
         List<Enemigo> vivos = new ArrayList<>();
         for (Enemigo e : enemigos) if (e.estaVivo()) vivos.add(e);
 

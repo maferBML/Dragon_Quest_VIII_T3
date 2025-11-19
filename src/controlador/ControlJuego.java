@@ -1,17 +1,22 @@
+package controlador;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
+import modelo.Combate;
 import modelo.Enemigo;
 import modelo.Habilidad;
 import modelo.Heroe;
-import modelo.Combate;
-import vista.VistaJuegoTerminal;
-import controlador.ControlJuego;
 
-public class App {
-    public static void main(String[] args) {
+public class ControlJuego {
 
+    public ControlJuego() {
+        // Por ahora no necesitamos nada en el constructor
+    }
+
+    // === MODO CONSOLA ===
+    public void iniciarConsola() {
         Heroe heroe1 = new Heroe("Héroe", 100, 30, 25, 10, 15);
         Heroe heroe2 = new Heroe("Yangus", 120, 20, 27, 12, 12);
         Heroe heroe3 = new Heroe("Jessica", 90, 50, 20, 8, 18);
@@ -62,11 +67,10 @@ public class App {
 
         ArrayList<Enemigo> enemigos = new ArrayList<>(Arrays.asList(enemigosArr));
 
-        // === MVC ===
-        Combate modeloCombate = new Combate(heroes, enemigos);
-        VistaJuegoTerminal vista = new VistaJuegoTerminal();
-        ControlJuego controlador = new ControlJuego(modeloCombate, vista);
-
-        controlador.iniciar(); // ← ahora inicia el juego
+        // pa iniciar
+        Combate combate = new Combate(heroes, enemigos);
+        combate.iniciar();
     }
+
+    // Más adelante aquí añadimos métodos para la GUI
 }
