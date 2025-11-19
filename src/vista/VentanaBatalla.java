@@ -1,28 +1,43 @@
 package vista;
 
 import controlador.ControlJuego;
-import modelo.*;
+import modelo.Enemigo;
+import modelo.Heroe;
+import modelo.Personaje;
+import modelo.Habilidad;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.*;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
-/**
- * Vista de la batalla, integrada con ControlJuego.
- * - No ejecuta lógica del modelo: pide acciones al controlador.
- * - Muestra el log y el estado (HP/MP).
- */
 public class VentanaBatalla extends JFrame {
 
-    private final ControlJuego control;
+    private enum ModoAccion { NINGUNO, ATACAR, HABILIDAD_ENEMIGO }
+
+    private ControlJuego control;
+
     private Image fondo;
     private JTextArea cuadroTexto;
     private JPanel panelHeroes, panelEnemigos, panelAcciones;
-    private List<Heroe> heroes;
-    private List<Enemigo> enemigos;
+
+    private ArrayList<Heroe> heroes;
+    private ArrayList<Enemigo> enemigos;
     private ArrayList<JLabel> labelsHeroes = new ArrayList<>();
-    private ArrayList<JPanel> panelsEnemigos = new ArrayList<>();
+    private ArrayList<JPanel> panelesEnemigos = new ArrayList<>();
+    private ArrayList<JButton> botonesEnemigos = new ArrayList<>();
+
+    private int indiceHeroeActual = 0;
+    private Random random = new Random();
+    private ModoAccion modoActual = ModoAccion.NINGUNO;
+
+    private JButton btnAtacar;
+    private JButton btnDefender;
+    private JButton btnHabilidad;
+    private JButton btnSalir;
+
+    private Habilidad habilidadSeleccionada = null; // para habilidades que van a enemigo
 
     public VentanaBatalla(ControlJuego control) {
         this.control = control;
@@ -37,29 +52,47 @@ public class VentanaBatalla extends JFrame {
 
         fondo = new ImageIcon(getClass().getResource("/foticos/bosque.jpg")).getImage();
 
-        JPanel panelFondo = new JPanel() {
+        construirInterfaz();
+
+        Heroe actual = obtenerHeroeActual();
+        if (actual != null) {
+            cuadroTexto.append("\nTurno inicial de: " + actual.getNombre() + "\n");
+        }
+
+        setVisible(true);
+    }
+
+    // ===================== INTERFAZ =====================
+
+    private void construirInterfaz() {
+        JPanel panelFondo = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                g.drawImage(fondo, 0, 0, getWidth(), getHeight(), this);
+                if (fondo != null) {
+                    g.drawImage(fondo, 0, 0, getWidth(), getHeight(), this);
+                }
             }
         };
-        panelFondo.setLayout(new BorderLayout());
-        panelFondo.setBorder(BorderFactory.createLineBorder(Color.WHITE, 6));
+        panelFondo.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        // Panel Héroes (arriba)
-        panelHeroes = new JPanel(new GridLayout(1, heroes.size(), 10, 10));
+        // Héroes
+        panelHeroes = new JPanel(new GridLayout(1, heroes.size(), 15, 15));
         panelHeroes.setOpaque(false);
-        panelHeroes.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        for (Heroe h : heroes) agregarHeroe(h);
+        panelHeroes.setBorder(BorderFactory.createEmptyBorder(10, 50, 10, 50));
+        for (Heroe h : heroes) {
+            agregarHeroe(h);
+        }
 
-        // Panel Enemigos (centro)
+        // Enemigos
         panelEnemigos = new JPanel(new GridLayout(1, enemigos.size(), 15, 15));
         panelEnemigos.setOpaque(false);
         panelEnemigos.setBorder(BorderFactory.createEmptyBorder(40, 50, 40, 50));
-        for (Enemigo e : enemigos) agregarEnemigo(e);
+        for (Enemigo e : enemigos) {
+            agregarEnemigo(e);
+        }
 
-        // Cuadro de texto y acciones (inferior)
+        // Cuadro de texto
         cuadroTexto = new JTextArea(8, 20);
         cuadroTexto.setEditable(false);
         cuadroTexto.setWrapStyleWord(true);
@@ -67,33 +100,53 @@ public class VentanaBatalla extends JFrame {
         cuadroTexto.setFont(new Font("Monospaced", Font.PLAIN, 14));
         cuadroTexto.setBackground(new Color(20, 20, 50));
         cuadroTexto.setForeground(Color.WHITE);
-        cuadroTexto.setText(control.getLog());
 
+        cuadroTexto.setText(mensajeJefeInicial());
+        cuadroTexto.append("\n💥 ¡Comienza la batalla! 💥\n");
+
+        // Panel de acciones
         panelAcciones = new JPanel();
         panelAcciones.setBackground(new Color(10, 10, 30));
-        panelAcciones.setOpaque(false);
 
-        JButton btnAtacar = crearBoton("Atacar (elige enemigo)");
-        JButton btnHabilidad = crearBoton("Habilidad");
-        JButton btnResetLog = crearBoton("Limpiar Log");
+        btnAtacar = crearBoton("Atacar");
+        btnDefender = crearBoton("Defender");
+        btnHabilidad = crearBoton("Habilidad");
+        btnSalir = crearBoton("Salir");
 
-        // Atacar: instruye al usuario a que elija un enemigo (los botones de enemigos realizan la acción)
-        btnAtacar.addActionListener(e -> cuadroTexto.setText("Elige un enemigo (botón debajo de cada enemigo)"));
-
-        // Habilidad: abre diálogo para seleccionar habilidad del héroe actual y objetivo
-        btnHabilidad.addActionListener(e -> abrirDialogoHabilidad());
-
-        btnResetLog.addActionListener(e -> {
-            control.limpiarLog();
-            cuadroTexto.setText(control.getLog());
+        btnAtacar.addActionListener(e -> {
+            Heroe h = obtenerHeroeActual();
+            if (h == null) {
+                cuadroTexto.append("\nNo quedan héroes vivos.\n");
+                return;
+            }
+            modoActual = ModoAccion.ATACAR;
+            habilidadSeleccionada = null;
+            cuadroTexto.append("\n" + h.getNombre() + " se prepara para atacar. Elige un enemigo.\n");
         });
 
+        btnDefender.addActionListener(e -> {
+            Heroe h = obtenerHeroeActual();
+            if (h == null) {
+                cuadroTexto.append("\nNo quedan héroes vivos.\n");
+                return;
+            }
+            cuadroTexto.append("\n👉 Turno de: " + h.getNombre() + "\n");
+            cuadroTexto.append(h.defenderTexto());
+            finTurnoJugador();
+            turnoEnemigo();
+        });
+
+        btnHabilidad.addActionListener(e -> manejarHabilidad());
+
+        btnSalir.addActionListener(e -> System.exit(0));
+
         panelAcciones.add(btnAtacar);
+        panelAcciones.add(btnDefender);
         panelAcciones.add(btnHabilidad);
-        panelAcciones.add(btnResetLog);
+        panelAcciones.add(btnSalir);
 
         JPanel panelInferior = new JPanel(new BorderLayout());
-        panelInferior.setOpaque(false);
+        panelInferior.setBackground(new Color(10, 10, 30));
         panelInferior.setBorder(BorderFactory.createLineBorder(Color.WHITE, 2));
         panelInferior.add(new JScrollPane(cuadroTexto), BorderLayout.CENTER);
         panelInferior.add(panelAcciones, BorderLayout.SOUTH);
@@ -103,167 +156,350 @@ public class VentanaBatalla extends JFrame {
         panelFondo.add(panelInferior, BorderLayout.SOUTH);
 
         add(panelFondo);
-        setVisible(true);
+    }
+
+    // ===================== COMPONENTES AUXILIARES =====================
+
+    private JButton crearBoton(String texto) {
+        JButton btn = new JButton(texto);
+        btn.setFont(new Font("Serif", Font.BOLD, 16));
+        btn.setFocusPainted(false);
+        btn.setBackground(new Color(40, 40, 90));
+        btn.setForeground(Color.WHITE);
+        btn.setBorder(BorderFactory.createLineBorder(Color.WHITE, 2));
+        return btn;
     }
 
     private void agregarHeroe(Heroe h) {
         JLabel lbl = new JLabel(
-            "<html><center><b>" + h.getNombre() + "</b><br>HP: " + h.getVidaHp() + "<br>MP: " + h.getMagiaMp() + "</center></html>",
-            JLabel.CENTER
+                "<html><center><b>" + h.getNombre() + "</b><br>HP: "
+                        + h.getVidaHp() + "<br>MP: " + h.getMagiaMp() + "</center></html>",
+                JLabel.CENTER
         );
         lbl.setForeground(Color.WHITE);
         lbl.setFont(new Font("Serif", Font.BOLD, 16));
         lbl.setBorder(BorderFactory.createLineBorder(Color.WHITE, 2));
         lbl.setOpaque(false);
+
         panelHeroes.add(lbl);
         labelsHeroes.add(lbl);
     }
 
     private void agregarEnemigo(Enemigo e) {
-        JPanel p = new JPanel(new BorderLayout());
-        p.setOpaque(false);
+        JPanel panelE = new JPanel(new BorderLayout());
+        panelE.setOpaque(false);
 
         JLabel lbl = new JLabel("<html><center>" + e.getNombre() + "</center></html>", JLabel.CENTER);
         lbl.setForeground(e.esMiniJefe() ? Color.ORANGE : Color.RED);
         lbl.setFont(new Font("Serif", Font.BOLD, 16));
         lbl.setBorder(BorderFactory.createLineBorder(e.esMiniJefe() ? Color.ORANGE : Color.RED, 2));
         lbl.setOpaque(false);
-        p.add(lbl, BorderLayout.CENTER);
+        panelE.add(lbl, BorderLayout.CENTER);
 
-        JButton btn = crearBoton("Atacar");
-        btn.addActionListener(ev -> {
-            // ejecutar ataque del héroe actual contra este enemigo
-            String nuevoLog = control.atacarEnemigo(e);
-            cuadroTexto.setText(nuevoLog);
-            actualizarLabelsHeroes();
-            actualizarPanelEnemigos(); // actualizar si enemigo murió
-        });
-        p.add(btn, BorderLayout.SOUTH);
+        JButton btn = crearBoton("Objetivo");
 
-        panelsEnemigos.add(p);
-        panelEnemigos.add(p);
+        btn.addActionListener(ev -> enemigoClicado(e, panelE, btn));
+
+        panelE.add(btn, BorderLayout.SOUTH);
+
+        panelEnemigos.add(panelE);
+        panelesEnemigos.add(panelE);
+        botonesEnemigos.add(btn);
     }
 
-    private void actualizarLabelsHeroes() {
-        for (int i = 0; i < heroes.size(); i++) {
-            Heroe h = heroes.get(i);
-            labelsHeroes.get(i).setText(
-                "<html><center><b>" + h.getNombre() +
-                "</b><br>HP: " + h.getVidaHp() +
-                "<br>MP: " + h.getMagiaMp() + "</center></html>"
-            );
-        }
-    }
-
-    private void actualizarPanelEnemigos() {
-        // Re-dibuja nombres/colores si murieron
-        for (int i = 0; i < enemigos.size(); i++) {
-            Enemigo e = enemigos.get(i);
-            JPanel p = panelsEnemigos.get(i);
-            // el label está en la posición BorderLayout.CENTER
-            Component c = p.getComponent(0);
-            if (c instanceof JLabel) {
-                JLabel lbl = (JLabel)c;
-                if (!e.estaVivo()) {
-                    lbl.setText("<html><center>💀 " + e.getNombre() + "</center></html>");
-                    lbl.setForeground(Color.GRAY);
-                    // deshabilitar botón
-                    if (p.getComponentCount() > 1 && p.getComponent(1) instanceof JButton) {
-                        JButton b = (JButton)p.getComponent(1);
-                        b.setEnabled(false);
-                    }
-                }
+    private String mensajeJefeInicial() {
+        StringBuilder sb = new StringBuilder();
+        for (Enemigo e : enemigos) {
+            if (e.esMiniJefe()) {
+                sb.append("¡Un ").append(e.getNombre().toUpperCase())
+                        .append(" ha aparecido como JEFE (Cagaste)!\n")
+                        .append("HP aumentado: ").append(e.getVidaHp()).append("\n")
+                        .append("Ataque aumentado: ").append(e.getAtaque()).append("\n")
+                        .append("Defensa aumentada: ").append(e.getDefensa()).append("\n");
+                break;
             }
         }
+        sb.append("==============================================\n");
+        return sb.toString();
     }
 
-    private JButton crearBoton(String texto) {
-        JButton b = new JButton(texto);
-        b.setFont(new Font("Serif", Font.BOLD, 16));
-        b.setBackground(new Color(30, 144, 255));
-        b.setForeground(Color.WHITE);
-        b.setFocusPainted(false);
-        b.setBorder(BorderFactory.createLineBorder(Color.WHITE, 2));
-        return b;
+    // ===================== LÓGICA DE TURNO =====================
+
+    private Heroe obtenerHeroeActual() {
+        int intentos = 0;
+        while (intentos < heroes.size()) {
+            Heroe h = heroes.get(indiceHeroeActual);
+            if (h.estaVivo()) {
+                return h;
+            }
+            indiceHeroeActual = (indiceHeroeActual + 1) % heroes.size();
+            intentos++;
+        }
+        return null;
     }
 
-    // Diálogo para elegir habilidad del héroe actual y objetivo
-    private void abrirDialogoHabilidad() {
-        Heroe actual = obtenerHeroeActualDesdeControl();
-        if (actual == null) {
-            JOptionPane.showMessageDialog(this, "No hay héroes vivos para usar habilidades.", "Información", JOptionPane.INFORMATION_MESSAGE);
+    private Enemigo elegirEnemigoVivoAleatorio() {
+        ArrayList<Enemigo> vivos = new ArrayList<>();
+        for (Enemigo e : enemigos) {
+            if (e.estaVivo()) vivos.add(e);
+        }
+        if (vivos.isEmpty()) return null;
+        return vivos.get(random.nextInt(vivos.size()));
+    }
+
+    private Heroe elegirHeroeVivoAleatorio() {
+        ArrayList<Heroe> vivos = new ArrayList<>();
+        for (Heroe h : heroes) {
+            if (h.estaVivo()) vivos.add(h);
+        }
+        if (vivos.isEmpty()) return null;
+        return vivos.get(random.nextInt(vivos.size()));
+    }
+
+    private boolean hayVivos(List<? extends Personaje> lista) {
+        for (Personaje p : lista) {
+            if (p.estaVivo()) return true;
+        }
+        return false;
+    }
+
+    private void actualizarHeroes() {
+        for (int i = 0; i < heroes.size(); i++) {
+            Heroe h = heroes.get(i);
+            JLabel lbl = labelsHeroes.get(i);
+            if (!h.estaVivo()) {
+                lbl.setVisible(false); // desaparece de la pantalla
+            } else {
+                lbl.setText("<html><center><b>" + h.getNombre() + "</b><br>HP: "
+                        + h.getVidaHp() + "<br>MP: " + h.getMagiaMp() + "</center></html>");
+                lbl.setForeground(Color.WHITE);
+            }
+        }
+        panelHeroes.revalidate();
+        panelHeroes.repaint();
+    }
+
+    private void deshabilitarTodo() {
+        for (JButton b : botonesEnemigos) {
+            b.setEnabled(false);
+        }
+        btnAtacar.setEnabled(false);
+        btnDefender.setEnabled(false);
+        btnHabilidad.setEnabled(false);
+    }
+
+    private void enemigoClicado(Enemigo enemigo, JPanel panelEnemigo, JButton botonEnemigo) {
+        Heroe atacante = obtenerHeroeActual();
+        if (atacante == null) {
+            cuadroTexto.append("\nNo quedan héroes vivos.\n");
             return;
         }
 
-        List<Habilidad> habs = actual.getHabilidades();
-        if (habs.isEmpty()) {
-            JOptionPane.showMessageDialog(this, actual.getNombre() + " no tiene habilidades.", "Información", JOptionPane.INFORMATION_MESSAGE);
+        if (modoActual == ModoAccion.ATACAR) {
+            ejecutarAtaqueBasico(atacante, enemigo, panelEnemigo, botonEnemigo);
+            modoActual = ModoAccion.NINGUNO;
+            habilidadSeleccionada = null;
+        } else if (modoActual == ModoAccion.HABILIDAD_ENEMIGO && habilidadSeleccionada != null) {
+            ejecutarHabilidadEnemigo(atacante, habilidadSeleccionada, enemigo, panelEnemigo, botonEnemigo);
+            modoActual = ModoAccion.NINGUNO;
+            habilidadSeleccionada = null;
+        } else {
+            cuadroTexto.append("\nPrimero elige 'Atacar' o 'Habilidad'.\n");
+        }
+    }
+
+    private void ejecutarAtaqueBasico(Heroe atacante, Enemigo objetivo, JPanel panelEnemigo, JButton botonEnemigo) {
+        if (objetivo == null || !objetivo.estaVivo()) {
+            cuadroTexto.append("Ese enemigo ya está derrotado.\n");
             return;
         }
 
-        // Crear opciones de lista de habilidades
-        String[] opciones = new String[habs.size()];
-        for (int i = 0; i < habs.size(); i++) {
-            Habilidad h = habs.get(i);
-            opciones[i] = (i+1) + ". " + h.getNombre() + " (" + h.getTipo() + ", MP:" + h.getCosteMp() + ")";
+        cuadroTexto.append("\n👉 Turno de: " + atacante.getNombre() + "\n");
+        cuadroTexto.append(atacante.atacarTexto(objetivo));
+
+        if (!objetivo.estaVivo()) {
+            cuadroTexto.append("💥 " + objetivo.getNombre() + " ha sido derrotado.\n");
+            panelEnemigo.setVisible(false);   // desaparece
+            botonEnemigo.setEnabled(false);
+        }
+
+        if (!hayVivos(enemigos)) {
+            cuadroTexto.append("\n🏆 ¡HAS GANADO LA BATALLA!\n");
+            deshabilitarTodo();
+            actualizarHeroes();
+            cuadroTexto.setCaretPosition(cuadroTexto.getText().length());
+            return;
+        }
+
+        finTurnoJugador();
+        turnoEnemigo();
+    }
+
+    // === HABILIDADES ===
+    private void manejarHabilidad() {
+        Heroe h = obtenerHeroeActual();
+        if (h == null) {
+            cuadroTexto.append("\nNo quedan héroes vivos.\n");
+            return;
+        }
+
+        ArrayList<Habilidad> habilidades = h.getHabilidades();
+        if (habilidades.isEmpty()) {
+            cuadroTexto.append("\n" + h.getNombre() + " no tiene habilidades.\n");
+            return;
+        }
+
+        String[] nombres = new String[habilidades.size()];
+        for (int i = 0; i < habilidades.size(); i++) {
+            Habilidad hab = habilidades.get(i);
+            nombres[i] = (i + 1) + ". " + hab.getNombre() + " (MP: " + hab.getCosteMp() + ")";
         }
 
         String seleccion = (String) JOptionPane.showInputDialog(
-            this,
-            "Elige una habilidad:",
-            "Habilidades",
-            JOptionPane.PLAIN_MESSAGE,
-            null,
-            opciones,
-            opciones[0]
+                this,
+                "Elige una habilidad:",
+                "Habilidades de " + h.getNombre(),
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                nombres,
+                nombres[0]
         );
 
-        if (seleccion == null) return; // cancel
+        if (seleccion == null) {
+            return; // canceló
+        }
 
-        int indice = Integer.parseInt(seleccion.split("\\.")[0]) - 1;
-        Habilidad hElegida = habs.get(indice);
-
-        if (hElegida.getTipo().equalsIgnoreCase("curación") || hElegida.getTipo().equalsIgnoreCase("curacion")) {
-            // elegir aliado a curar
-            String[] aliados = heroes.stream().filter(Heroe::estaVivo).map(Heroe::getNombre).toArray(String[]::new);
-            String elegido = (String) JOptionPane.showInputDialog(this, "Elige aliado a curar:", "Curación", JOptionPane.PLAIN_MESSAGE, null, aliados, aliados[0]);
-            if (elegido == null) return;
-            Heroe aliado = heroes.stream().filter(h -> h.getNombre().equals(elegido)).findFirst().orElse(null);
-            if (aliado != null) {
-                String nuevoLog = control.usarHabilidadCuracion(indice, aliado);
-                cuadroTexto.setText(nuevoLog);
-                actualizarLabelsHeroes();
-                actualizarPanelEnemigos();
+        int indice = 0;
+        for (int i = 0; i < nombres.length; i++) {
+            if (nombres[i].equals(seleccion)) {
+                indice = i;
+                break;
             }
-        } else {
-            // elegir enemigo objetivo
-            List<Enemigo> vivos = new ArrayList<>();
-            for (Enemigo e : enemigos) if (e.estaVivo()) vivos.add(e);
+        }
+
+        Habilidad hSel = habilidades.get(indice);
+        String tipo = hSel.getTipo().toLowerCase();
+
+        if (tipo.equals("curación")) {
+            // Elegir aliado
+            ArrayList<Heroe> vivos = new ArrayList<>();
+            for (Heroe her : heroes) if (her.estaVivo()) vivos.add(her);
+
             if (vivos.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "No hay enemigos vivos.", "Información", JOptionPane.INFORMATION_MESSAGE);
+                cuadroTexto.append("\nNo hay aliados vivos para curar.\n");
                 return;
             }
-            String[] opcionesEn = vivos.stream().map(Enemigo::getNombre).toArray(String[]::new);
-            String elegido = (String) JOptionPane.showInputDialog(this, "Elige enemigo objetivo:", "Habilidad", JOptionPane.PLAIN_MESSAGE, null, opcionesEn, opcionesEn[0]);
-            if (elegido == null) return;
-            Enemigo objetivo = vivos.stream().filter(en -> en.getNombre().equals(elegido)).findFirst().orElse(null);
-            if (objetivo != null) {
-                String nuevoLog = control.usarHabilidadEnemigo(indice, objetivo);
-                cuadroTexto.setText(nuevoLog);
-                actualizarLabelsHeroes();
-                actualizarPanelEnemigos();
+
+            String[] nombresAliados = new String[vivos.size()];
+            for (int i = 0; i < vivos.size(); i++) {
+                Heroe ha = vivos.get(i);
+                nombresAliados[i] = ha.getNombre() + " (HP: " + ha.getVidaHp() + ")";
             }
+
+            String selAliado = (String) JOptionPane.showInputDialog(
+                    this,
+                    "¿A quién quieres curar?",
+                    "Elegir aliado",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    nombresAliados,
+                    nombresAliados[0]
+            );
+
+            if (selAliado == null) return;
+
+            Heroe objetivoHeroe = vivos.get(0);  // <- CORRECTO
+
+    for (int i = 0; i < nombresAliados.length; i++) {
+        if (nombresAliados[i].equals(selAliado)) {
+            objetivoHeroe = vivos.get(i); // <- TAMBIÉN CORRECTO
+            break;
         }
     }
 
-    // Helper: obtener héroe actual consultando al controlador (coincide con su lógica)
-    private Heroe obtenerHeroeActualDesdeControl() {
-        // ControlJuego no expone directamente el índice, así que deducimos por estado:
-        for (Heroe h : control.getHeroes()) {
-            if (h.estaVivo()) {
-                return h; // la vista no necesita exactitud sobre cuál es "actual" para elegir habilidades; control usa su propia rotación
-            }
+
+            cuadroTexto.append("\n👉 Turno de: " + h.getNombre() + "\n");
+            cuadroTexto.append(
+                    h.usarHabilidadGUI(hSel, heroes, objetivoHeroe, null)
+            );
+
+            actualizarHeroes();
+            finTurnoJugador();
+            turnoEnemigo();
+
+        } else {
+            // daño / estado: se elige enemigo haciendo click
+            habilidadSeleccionada = hSel;
+            modoActual = ModoAccion.HABILIDAD_ENEMIGO;
+            cuadroTexto.append("\n" + h.getNombre() + " prepara " + hSel.getNombre()
+                    + ". Elige un enemigo como objetivo.\n");
         }
-        return null;
+    }
+
+    private void ejecutarHabilidadEnemigo(Heroe atacante,
+                                          Habilidad hab,
+                                          Enemigo objetivo,
+                                          JPanel panelEnemigo,
+                                          JButton botonEnemigo) {
+
+        if (objetivo == null || !objetivo.estaVivo()) {
+            cuadroTexto.append("Ese enemigo ya está derrotado.\n");
+            return;
+        }
+
+        cuadroTexto.append("\n👉 Turno de: " + atacante.getNombre() + "\n");
+        cuadroTexto.append(
+                atacante.usarHabilidadGUI(hab, heroes, null, objetivo)
+        );
+
+        if (!objetivo.estaVivo()) {
+            cuadroTexto.append("💥 " + objetivo.getNombre() + " ha sido derrotado.\n");
+            panelEnemigo.setVisible(false);
+            botonEnemigo.setEnabled(false);
+        }
+
+        if (!hayVivos(enemigos)) {
+            cuadroTexto.append("\n🏆 ¡HAS GANADO LA BATALLA!\n");
+            deshabilitarTodo();
+            actualizarHeroes();
+            cuadroTexto.setCaretPosition(cuadroTexto.getText().length());
+            return;
+        }
+
+        actualizarHeroes();
+        finTurnoJugador();
+        turnoEnemigo();
+    }
+
+    private void turnoEnemigo() {
+        if (!hayVivos(enemigos) || !hayVivos(heroes)) return;
+
+        Enemigo enemigoAtaca = elegirEnemigoVivoAleatorio();
+        Heroe heroeObjetivo = elegirHeroeVivoAleatorio();
+
+        if (enemigoAtaca == null || heroeObjetivo == null) return;
+
+        cuadroTexto.append("\n⚠️ Turno del enemigo: " + enemigoAtaca.getNombre() + "\n");
+        cuadroTexto.append(
+                enemigoAtaca.accionAutomaticaTexto(heroeObjetivo)
+        );
+
+        if (!heroeObjetivo.estaVivo()) {
+            cuadroTexto.append("💀 " + heroeObjetivo.getNombre() + " ha sido derrotado.\n");
+        }
+
+        if (!hayVivos(heroes)) {
+            cuadroTexto.append("\n💀 ¡TU EQUIPO HA SIDO DERROTADO!\n");
+            deshabilitarTodo();
+        }
+
+        actualizarHeroes();
+        cuadroTexto.setCaretPosition(cuadroTexto.getText().length());
+    }
+
+    private void finTurnoJugador() {
+        actualizarHeroes();
+        indiceHeroeActual = (indiceHeroeActual + 1) % heroes.size();
+        cuadroTexto.setCaretPosition(cuadroTexto.getText().length());
     }
 }

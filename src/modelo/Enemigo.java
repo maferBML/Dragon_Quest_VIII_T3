@@ -1,4 +1,5 @@
 package modelo;
+
 import java.util.Random;
 
 public class Enemigo extends Personaje {
@@ -22,12 +23,15 @@ public class Enemigo extends Personaje {
         }
     }
 
-    @Override
-    public void atacar(Personaje enemigo) {
+    // ==== ATAQUE COMPARTIDO (texto) ====
+    public String atacarTexto(Personaje enemigo) {
+        StringBuilder sb = new StringBuilder();
+
         if (getEstado() != null && getEstado().getNombre().equals("Paralizado")) {
-            System.out.println(getNombre() + " está paralizado y no puede atacar. (lero lero)");
-            return;
+            sb.append(getNombre()).append(" está paralizado y no puede atacar.\n");
+            return sb.toString();
         }
+
         boolean critico = false;
         int danioBase = this.getAtaque() - enemigo.getDefensa();
         if (danioBase < 0) danioBase = 0;
@@ -35,47 +39,70 @@ public class Enemigo extends Personaje {
         if (miniJefe && random.nextInt(100) < 40) {
             critico = true;
             danioBase *= 2;
-            System.out.println(getNombre() + " te da un GOLPE CRÍTICO! CORRE!");
+            sb.append(getNombre()).append(" te da un GOLPE CRÍTICO! CORRE!\n");
         }
 
         enemigo.setVidaHp(enemigo.getVidaHp() - danioBase);
-        System.out.println(getNombre() + " ataca a " + enemigo.getNombre() + " causando " + danioBase + " puntos de daño.");
+        sb.append(getNombre()).append(" ataca a ").append(enemigo.getNombre())
+          .append(" causando ").append(danioBase).append(" puntos de daño.\n");
 
         if (miniJefe && critico && enemigo.estaVivo()) {
             if (random.nextInt(100) < 70) {
-                int duracionSueño = random.nextInt(3) + 1; // 1-3 turnos
+                int duracionSueño = random.nextInt(3) + 1;
                 enemigo.setEstado(new Estado("Sueño", duracionSueño));
-                System.out.println(enemigo.getNombre() + " ha caído dormido por " + duracionSueño + " turnos!");
+                sb.append(enemigo.getNombre())
+                  .append(" ha caído dormido por ")
+                  .append(duracionSueño).append(" turnos!\n");
             }
         }
 
         if (enemigo.getVidaHp() <= 0) {
             enemigo.setVive(false);
             enemigo.setVidaHp(0);
-            System.out.println(enemigo.getNombre() + " ha sido derrotado.");
+            sb.append(enemigo.getNombre()).append(" ha sido derrotado.\n");
         }
+
+        return sb.toString();
     }
 
+    @Override
+    public void atacar(Personaje enemigo) {
+        System.out.print(atacarTexto(enemigo));
+    }
 
-    public void accionAutomatica(Personaje enemigo) {
-        int decision = random.nextInt(100);
-        if (getEstado() != null && getEstado().getNombre().equals("Paralizado")) {
-            System.out.println(getNombre() + " está paralizado y no puede actuar.");
-            return;
-        }
-
-        if (tipo.equalsIgnoreCase("agresivo")) {
-            atacar(enemigo);
-        } else if (tipo.equalsIgnoreCase("defensivo") && decision < 30) {
-            defender();
-        } else {
-            atacar(enemigo);
-        }
+    public String defenderTexto() {
+        setDefensa(getDefensa() + 10);
+        return this.getNombre() + " se prepara para defenderse.\n";
     }
 
     public void defender() {
-        System.out.println(this.getNombre() + " se prepara para defenderse del próximo ataque.");
-        setDefensa(getDefensa() + 10);
+        System.out.print(defenderTexto());
+    }
+
+    // ==== IA COMPARTIDA ====
+    public String accionAutomaticaTexto(Personaje enemigo) {
+        StringBuilder sb = new StringBuilder();
+
+        if (getEstado() != null && getEstado().getNombre().equals("Paralizado")) {
+            sb.append(getNombre()).append(" está paralizado y no puede actuar.\n");
+            return sb.toString();
+        }
+
+        int decision = random.nextInt(100);
+
+        if (tipo.equalsIgnoreCase("agresivo")) {
+            sb.append(atacarTexto(enemigo));
+        } else if (tipo.equalsIgnoreCase("defensivo") && decision < 30) {
+            sb.append(defenderTexto());
+        } else {
+            sb.append(atacarTexto(enemigo));
+        }
+
+        return sb.toString();
+    }
+
+    public void accionAutomatica(Personaje enemigo) {
+        System.out.print(accionAutomaticaTexto(enemigo));
     }
 
     public String getTipo() { return tipo; }

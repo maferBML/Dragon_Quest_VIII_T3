@@ -1,14 +1,14 @@
 package vista;
 
 import controlador.ControlJuego;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 
 public class VentanaInicio extends JFrame {
 
     private Image imagenFondo;
-    private final ControlJuego control;
+    private ControlJuego control;
 
     public VentanaInicio(ControlJuego control) {
         this.control = control;
@@ -25,7 +25,9 @@ public class VentanaInicio extends JFrame {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                g.drawImage(imagenFondo, 0, 0, getWidth(), getHeight(), this);
+                if (imagenFondo != null) {
+                    g.drawImage(imagenFondo, 0, 0, getWidth(), getHeight(), this);
+                }
             }
         };
         panel.setLayout(new BorderLayout());
@@ -38,18 +40,19 @@ public class VentanaInicio extends JFrame {
 
         JButton btnIniciar = new JButton("⚔️ Iniciar Batalla");
         btnIniciar.setFont(new Font("Serif", Font.BOLD, 24));
-        btnIniciar.setBackground(new Color(30, 144, 225));
-        btnIniciar.setForeground(Color.WHITE);
         btnIniciar.setFocusPainted(false);
+        btnIniciar.setBackground(new Color(30, 30, 80));
+        btnIniciar.setForeground(Color.WHITE);
         btnIniciar.setBorder(BorderFactory.createLineBorder(Color.WHITE, 3));
 
-        btnIniciar.addActionListener((ActionEvent e) -> {
+        btnIniciar.addActionListener(e -> {
+            new VentanaBatalla(control); // usa los mismos héroes/enemigos del controlador
             dispose();
-            new VentanaBatalla(control);
         });
 
         panel.add(titulo, BorderLayout.NORTH);
         panel.add(btnIniciar, BorderLayout.CENTER);
+
         add(panel);
         setVisible(true);
     }
