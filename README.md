@@ -1,21 +1,18 @@
-# ⚔🗿Dragon_Quest_VIII_T3
-Mini Proyecto de Programación
-Simulación en consola inspirada en Dragon Quest VIII.
+## Getting Started
 
-# 📌 Descripción
-Este mini proyecto es un simulador de combates por turnos inspirado en Dragon Quest VIII, desarrollado como práctica de Programación Orientada a Objetos (POO) y estructurado bajo el patrón de arquitectura MVC (Modelo–Vista–Controlador).
+Welcome to the VS Code Java world. Here is a guideline to help you get started to write Java code in Visual Studio Code.
 
-El sistema permite crear héroes y enemigos con diferentes atributos, habilidades, puntos de vida (HP), magia (MP) y velocidad.
-Cada combate se desarrolla por turnos, aplicando ataques físicos, mágicos, defensas y habilidades especiales que modifican las estadísticas o estados del oponente.
+## Folder Structure
 
-# 🎮 Caracteristicas
+The workspace contains two folders by default, where:
 
-✔ Implementación del patrón MVC (Modelo–Vista–Controlador).
-✔ Sistema de combate por turnos basado en velocidad.
-✔ Creación de héroes y enemigos con atributos configurables.
-✔ Habilidades de ataque físico, mágico y curación.
+- `src`: the folder to maintain sources
+- `lib`: the folder to maintain dependencies
 
-# 🔮 Programas Utilizados
-- Visual Studio -> Java 
-- GitHub 
-- Git
+Meanwhile, the compiled output files will be generated in the `bin` folder by default.
+
+> If you want to customize the folder structure, open `.vscode/settings.json` and update the related settings there.
+
+## Dependency Management
+
+The `JAVA PROJECTS` view allows you to manage your dependencies. More details can be found [here](https://github.com/microsoft/vscode-java-dependency#manage-dependencies).
