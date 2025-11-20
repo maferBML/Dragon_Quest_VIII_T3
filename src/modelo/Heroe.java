@@ -17,18 +17,13 @@ public class Heroe extends Personaje {
         habilidades.add(h);
     }
 
-    // ==== GETTER PARA LA GUI ====
-    public ArrayList<Habilidad> getHabilidades() {
-        return habilidades;
-    }
+    // ================== LÓGICA ORIGINAL (CONSOLA) ==================
 
-    // ==== ATAQUE COMPARTIDO (TEXTO) ====
-    public String atacarTexto(Personaje enemigo) {
-        StringBuilder sb = new StringBuilder();
-
+    @Override
+    public void atacar(Personaje enemigo) {
         if (getEstado() != null && getEstado().getNombre().equals("Paralizado")) {
-            sb.append(getNombre()).append(" está paralizado y no puede atacar.\n");
-            return sb.toString();
+            System.out.println(getNombre() + " está paralizado y no puede atacar.");
+            return;
         }
 
         int danio = this.getAtaque() - enemigo.getDefensa();
@@ -38,31 +33,15 @@ public class Heroe extends Personaje {
         if (enemigo.getVidaHp() <= 0) {
             enemigo.setVive(false);
             enemigo.setVidaHp(0);
-            sb.append(enemigo.getNombre()).append(" ha sido derrotado.\n");
+            System.out.println(enemigo.getNombre() + " ha sido derrotado.");
         } else {
-            sb.append(this.getNombre()).append(" ataca a ")
-              .append(enemigo.getNombre())
-              .append(" causando ").append(danio)
-              .append(" puntos de daño.\n");
+            System.out.println(this.getNombre() + " ataca a " + enemigo.getNombre() + " causando " + danio + " puntos de daño.");
         }
-        return sb.toString();
-    }
-
-    @Override
-    public void atacar(Personaje enemigo) {
-        // Versión consola: imprime el texto
-        System.out.print(atacarTexto(enemigo));
-    }
-
-    // ==== DEFENSA COMPARTIDA ====
-    public String defenderTexto() {
-        setDefensa(getDefensa() + 5);
-        return this.getNombre()
-                + " se anda preparando para defenderse del próximo ataque. Defensa aumentada temporalmente.\n";
     }
 
     public void defender() {
-        System.out.print(defenderTexto());
+        System.out.println(this.getNombre() + " se anda preparando para defenderse del próximo ataque. Defensa aumentada temporalmente.");
+        setDefensa(getDefensa() + 5);
     }
 
     public void curar(int cantidad) {
@@ -70,61 +49,7 @@ public class Heroe extends Personaje {
         System.out.println(this.getNombre() + " se cura " + cantidad + " puntos de vida. Vida actual: " + this.getVidaHp());
     }
 
-    // ================== LÓGICA DE HABILIDADES COMPARTIDA ==================
-
-    private String aplicarHabilidad(Habilidad h,
-                                    ArrayList<Heroe> heroes,
-                                    Heroe objetivoHeroe,
-                                    Enemigo objetivoEnemigo) {
-
-        StringBuilder sb = new StringBuilder();
-        String tipo = h.getTipo().toLowerCase();
-
-        switch (tipo) {
-            case "daño" -> {
-                if (objetivoEnemigo == null || !objetivoEnemigo.estaVivo()) {
-                    sb.append("El enemigo objetivo no es válido.\n");
-                    break;
-                }
-                objetivoEnemigo.setVidaHp(objetivoEnemigo.getVidaHp() - h.getPoder());
-                sb.append(objetivoEnemigo.getNombre())
-                  .append(" recibe ").append(h.getPoder())
-                  .append(" puntos de daño mágico.\n");
-                if (objetivoEnemigo.getVidaHp() <= 0) {
-                    objetivoEnemigo.setVive(false);
-                    objetivoEnemigo.setVidaHp(0);
-                    sb.append(objetivoEnemigo.getNombre()).append(" ha sido derrotado.\n");
-                }
-            }
-
-            case "estado" -> {
-                if (objetivoEnemigo == null || !objetivoEnemigo.estaVivo()) {
-                    sb.append("El enemigo objetivo no es válido.\n");
-                    break;
-                }
-                objetivoEnemigo.setEstado(new Estado(h.getEstado(), h.getDuracion()));
-                sb.append(objetivoEnemigo.getNombre())
-                  .append(" ahora está ").append(h.getEstado()).append(".\n");
-            }
-
-            case "curación" -> {
-                if (objetivoHeroe == null || !objetivoHeroe.estaVivo()) {
-                    sb.append("El aliado objetivo no es válido.\n");
-                    break;
-                }
-                objetivoHeroe.setVidaHp(objetivoHeroe.getVidaHp() + h.getPoder());
-                sb.append(objetivoHeroe.getNombre())
-                  .append(" recupera ").append(h.getPoder())
-                  .append(" puntos de vida.\n");
-            }
-
-            default -> sb.append("¿Qué es esa habilidad? Para próximas actualizaciones te la ponemos.\n");
-        }
-
-        return sb.toString();
-    }
-
-    // ==== VERSIÓN CONSOLA ====
+    // versión de consola con Scanner
     public void usarHabilidad(ArrayList<Heroe> heroes, List<Enemigo> enemigos) {
         if (habilidades.isEmpty()) {
             System.out.println(getNombre() + " no tiene habilidades.");
@@ -157,68 +82,47 @@ public class Heroe extends Personaje {
         setMagiaMp(getMagiaMp() - h.getCosteMp());
         System.out.println(getNombre() + " usa " + h.getNombre() + "!");
 
-        String tipo = h.getTipo().toLowerCase();
+        switch (h.getTipo().toLowerCase()) {
+            case "daño" -> {
+                Enemigo enemigo = elegirEnemigo(enemigos);
+                if (enemigo == null) return;
+                enemigo.setVidaHp(enemigo.getVidaHp() - h.getPoder());
+                System.out.println(enemigo.getNombre() + " recibe " + h.getPoder() + " puntos de daño mágico.");
+                if (enemigo.getVidaHp() <= 0) enemigo.setVive(false);
+            }
 
-        Enemigo objetivoEnemigo = null;
-        Heroe objetivoHeroe = null;
+            case "estado" -> {
+                Enemigo enemigo = elegirEnemigo(enemigos);
+                if (enemigo == null) return;
+                enemigo.setEstado(new Estado(h.getEstado(), h.getDuracion()));
+                System.out.println(enemigo.getNombre() + " ahora está " + h.getEstado() + ".");
+            }
 
-        if (tipo.equals("daño") || tipo.equals("estado")) {
-            objetivoEnemigo = elegirEnemigo(enemigos);
-            if (objetivoEnemigo == null) return;
-        } else if (tipo.equals("curación")) {
-            System.out.println("\n¿A qué compañero quieres curar?");
-            for (int i = 0; i < heroes.size(); i++) {
-                Heroe aliado = heroes.get(i);
-                if (aliado.estaVivo()) {
-                    System.out.println((i + 1) + ". " + aliado.getNombre() + " (HP: " + aliado.getVidaHp() + ")");
+            case "curación" -> {
+                System.out.println("\n¿A qué compañero quieres curar?");
+                for (int i = 0; i < heroes.size(); i++) {
+                    Heroe aliado = heroes.get(i);
+                    if (aliado.estaVivo()) {
+                        System.out.println((i + 1) + ". " + aliado.getNombre() + " (HP: " + aliado.getVidaHp() + ")");
+                    }
                 }
-            }
-            System.out.print("Elige número: ");
-            int eleccion = sc.nextInt();
+                System.out.print("Elige número: ");
+                int eleccion = sc.nextInt();
 
-            if (eleccion < 1 || eleccion > heroes.size() || !heroes.get(eleccion - 1).estaVivo()) {
-                System.out.println("\nY esa opción de dónde salió? Pierdes el turno por inventarte cosas.");
-                return;
+                if (eleccion < 1 || eleccion > heroes.size() || !heroes.get(eleccion - 1).estaVivo()) {
+                    System.out.println("\nY esa opción de dónde salió? Pierdes el turno por inventarte cosas.");
+                    return;
+                }
+
+                Heroe aliadoCurado = heroes.get(eleccion - 1);
+                aliadoCurado.setVidaHp(aliadoCurado.getVidaHp() + h.getPoder());
+                System.out.println(aliadoCurado.getNombre() + " recupera " + h.getPoder() + " puntos de vida.");
             }
 
-            objetivoHeroe = heroes.get(eleccion - 1);
+            default -> System.out.println("\n¿Qué es esa habilidad? Para próximas actualizaciones te la ponemos.");
         }
-
-        String texto = aplicarHabilidad(h, heroes, objetivoHeroe, objetivoEnemigo);
-        System.out.print(texto);
     }
 
-    // ==== VERSIÓN GUI ====
-    public String usarHabilidadGUI(Habilidad h,
-                                   ArrayList<Heroe> heroes,
-                                   Heroe objetivoHeroe,
-                                   Enemigo objetivoEnemigo) {
-
-        StringBuilder sb = new StringBuilder();
-
-        if (habilidades.isEmpty()) {
-            sb.append(getNombre()).append(" no tiene habilidades.\n");
-            return sb.toString();
-        }
-
-        if (!habilidades.contains(h)) {
-            sb.append("Esa habilidad no pertenece a ").append(getNombre()).append(".\n");
-            return sb.toString();
-        }
-
-        if (getMagiaMp() < h.getCosteMp()) {
-            sb.append("No tienes suficiente MP para usar ").append(h.getNombre()).append(".\n");
-            return sb.toString();
-        }
-
-        setMagiaMp(getMagiaMp() - h.getCosteMp());
-        sb.append(getNombre()).append(" usa ").append(h.getNombre()).append("!\n");
-        sb.append(aplicarHabilidad(h, heroes, objetivoHeroe, objetivoEnemigo));
-
-        return sb.toString();
-    }
-
-    // ====== auxiliares ======
     private Enemigo elegirEnemigo(List<Enemigo> enemigos) {
         Scanner sc = new Scanner(System.in);
         List<Enemigo> vivos = new ArrayList<>();
@@ -241,5 +145,127 @@ public class Heroe extends Personaje {
         }
 
         return vivos.get(eleccion - 1);
+    }
+
+    // ================== MÉTODOS EXTRA PARA LA GUI ==================
+
+    public ArrayList<Habilidad> getHabilidades() {
+        return habilidades;
+    }
+
+    /** Igual que defender(), pero devuelve el texto para la GUI. */
+    public String defenderTexto() {
+        if (getEstado() != null && getEstado().getNombre().equals("Paralizado")) {
+            return getNombre() + " está paralizado y no puede defenderse.\n";
+        }
+        setDefensa(getDefensa() + 5);
+        return getNombre() + " se prepara para defenderse del próximo ataque. Defensa aumentada temporalmente.\n";
+    }
+
+    /** Ataque básico que devuelve texto sin usar System.out. */
+    public String atacarTexto(Enemigo enemigo) {
+        StringBuilder sb = new StringBuilder();
+
+        if (!estaVivo()) {
+            sb.append(getNombre()).append(" ya no puede atacar.\n");
+            return sb.toString();
+        }
+
+        if (getEstado() != null && getEstado().getNombre().equals("Paralizado")) {
+            sb.append(getNombre()).append(" está paralizado y no puede atacar.\n");
+            return sb.toString();
+        }
+
+        if (enemigo == null || !enemigo.estaVivo()) {
+            sb.append("Ese enemigo ya está derrotado.\n");
+            return sb.toString();
+        }
+
+        int danio = this.getAtaque() - enemigo.getDefensa();
+        if (danio < 0) danio = 0;
+
+        enemigo.setVidaHp(enemigo.getVidaHp() - danio);
+
+        sb.append(getNombre()).append(" ataca a ")
+          .append(enemigo.getNombre())
+          .append(" causando ").append(danio).append(" puntos de daño.\n");
+
+        if (enemigo.getVidaHp() <= 0) {
+            enemigo.setVive(false);
+            enemigo.setVidaHp(0);
+            sb.append(enemigo.getNombre()).append(" ha sido derrotado.\n");
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * Versión sin Scanner para la GUI.
+     * - h: habilidad elegida.
+     * - objetivoAliado: se usa si es curación.
+     * - objetivoEnemigo: se usa si es daño/estado.
+     */
+    public String usarHabilidadGUI(Habilidad h,
+                                   ArrayList<Heroe> heroes,
+                                   Heroe objetivoAliado,
+                                   Enemigo objetivoEnemigo) {
+
+        StringBuilder sb = new StringBuilder();
+
+        if (!estaVivo()) {
+            sb.append(getNombre()).append(" ya no puede actuar.\n");
+            return sb.toString();
+        }
+
+        if (getMagiaMp() < h.getCosteMp()) {
+            sb.append("No tienes suficiente MP para usar ").append(h.getNombre()).append(".\n");
+            return sb.toString();
+        }
+
+        setMagiaMp(getMagiaMp() - h.getCosteMp());
+        sb.append(getNombre()).append(" usa ").append(h.getNombre()).append("!\n");
+
+        switch (h.getTipo().toLowerCase()) {
+            case "daño" -> {
+                if (objetivoEnemigo == null || !objetivoEnemigo.estaVivo()) {
+                    sb.append("Ese enemigo ya está derrotado.\n");
+                    break;
+                }
+                objetivoEnemigo.setVidaHp(objetivoEnemigo.getVidaHp() - h.getPoder());
+                sb.append(objetivoEnemigo.getNombre())
+                  .append(" recibe ").append(h.getPoder())
+                  .append(" puntos de daño mágico.\n");
+                if (objetivoEnemigo.getVidaHp() <= 0) {
+                    objetivoEnemigo.setVive(false);
+                    objetivoEnemigo.setVidaHp(0);
+                    sb.append(objetivoEnemigo.getNombre()).append(" ha sido derrotado.\n");
+                }
+            }
+
+            case "estado" -> {
+                if (objetivoEnemigo == null || !objetivoEnemigo.estaVivo()) {
+                    sb.append("Ese enemigo ya está derrotado.\n");
+                    break;
+                }
+                objetivoEnemigo.setEstado(new Estado(h.getEstado(), h.getDuracion()));
+                sb.append(objetivoEnemigo.getNombre())
+                  .append(" ahora está ").append(h.getEstado()).append(".\n");
+            }
+
+            case "curación" -> {
+                if (objetivoAliado == null || !objetivoAliado.estaVivo()) {
+                    sb.append("No hay aliado válido para curar.\n");
+                    break;
+                }
+                objetivoAliado.setVidaHp(objetivoAliado.getVidaHp() + h.getPoder());
+                sb.append(objetivoAliado.getNombre())
+                  .append(" recupera ").append(h.getPoder())
+                  .append(" puntos de vida.\n");
+            }
+
+            default -> sb.append("La habilidad no está bien configurada.\n");
+        }
+
+        return sb.toString();
     }
 }

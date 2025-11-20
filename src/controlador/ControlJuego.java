@@ -111,4 +111,9 @@ public class ControlJuego {
     public ArrayList<Enemigo> getEnemigos() {
         return enemigos;
     }
+
+    public void reiniciarPartida() {
+        crearPartidaBase();
+}
+
 }
