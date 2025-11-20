@@ -30,30 +30,82 @@ public class VentanaInicio extends JFrame {
                 }
             }
         };
-        panel.setLayout(new BorderLayout());
-        panel.setBorder(BorderFactory.createLineBorder(Color.WHITE, 6));
 
-        JLabel titulo = new JLabel("DRAGON QUEST VIII: El Despertar de Trodain", JLabel.CENTER);
-        titulo.setFont(new Font("Serif", Font.BOLD, 28));
+        panel.setLayout(null);
+        add(panel);
+
+        // ================= TÍTULO CLÁSICO =================
+        JLabel titulo = new JLabel("DRAGON QUEST VIII", JLabel.CENTER);
+        titulo.setFont(new Font("Serif", Font.BOLD, 60));
         titulo.setForeground(Color.WHITE);
-        titulo.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+        titulo.setBounds(0, 80, getWidth(), 50);
+        panel.add(titulo);
 
-        JButton btnIniciar = new JButton("⚔️ Iniciar Batalla");
-        btnIniciar.setFont(new Font("Serif", Font.BOLD, 24));
-        btnIniciar.setFocusPainted(false);
-        btnIniciar.setBackground(new Color(30, 30, 80));
-        btnIniciar.setForeground(Color.WHITE);
-        btnIniciar.setBorder(BorderFactory.createLineBorder(Color.WHITE, 3));
+        // ================= BOTONES RPG =================
+        JLabel btnStart = crearBotonMenu("▶  Empezar aventura");
+        btnStart.setBounds(50, 250, 400, 60);
+        panel.add(btnStart);
 
-        btnIniciar.addActionListener(e -> {
-            new VentanaBatalla(control); // usa los mismos héroes/enemigos del controlador
-            dispose();
+        JLabel btnSalir = crearBotonMenu("✖  Salir");
+        btnSalir.setBounds(50, 330, 400, 60);
+        panel.add(btnSalir);
+
+        // Acción iniciar
+        btnStart.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                new VentanaBatalla(control);
+                dispose();
+            }
         });
 
-        panel.add(titulo, BorderLayout.NORTH);
-        panel.add(btnIniciar, BorderLayout.CENTER);
+        // Acción salir
+        btnSalir.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                System.exit(0);
+            }
+        });
 
-        add(panel);
+        // Animación sutil de hover (solo desliza, sin brillo)
+        animacionHoverDeslizar(btnStart);
+        animacionHoverDeslizar(btnSalir);
+
         setVisible(true);
+    }
+
+    // ====================== BOTÓN ESTILO RPG ======================
+    private JLabel crearBotonMenu(String texto) {
+        JLabel lbl = new JLabel(texto);
+        lbl.setFont(new Font("Serif", Font.BOLD, 32));
+        lbl.setForeground(Color.WHITE);
+        lbl.setOpaque(false);
+        return lbl;
+    }
+
+    // ====================== HOVER DESLIZANTE ======================
+    private void animacionHoverDeslizar(JLabel lbl) {
+        lbl.addMouseListener(new java.awt.event.MouseAdapter() {
+
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                new Thread(() -> {
+                    for (int i = 0; i < 8; i++) {
+                        lbl.setLocation(lbl.getX() + 2, lbl.getY());
+                        try { Thread.sleep(8); } catch (Exception ignored) {}
+                    }
+                }).start();
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                new Thread(() -> {
+                    for (int i = 0; i < 8; i++) {
+                        lbl.setLocation(lbl.getX() - 2, lbl.getY());
+                        try { Thread.sleep(8); } catch (Exception ignored) {}
+                    }
+                }).start();
+            }
+        });
     }
 }
