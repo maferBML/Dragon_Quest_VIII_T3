@@ -1,5 +1,6 @@
 package vista;
 
+import modelo.Musica;
 import controlador.ControlJuego;
 
 import javax.swing.*;
@@ -9,6 +10,7 @@ public class VentanaInicio extends JFrame {
 
     private Image imagenFondo;
     private ControlJuego control;
+    private Musica musica = new Musica();
 
     public VentanaInicio(ControlJuego control) {
         this.control = control;
@@ -41,6 +43,13 @@ public class VentanaInicio extends JFrame {
         titulo.setBounds(0, 80, getWidth(), 50);
         panel.add(titulo);
 
+        // SUBTÍTULO (opcional)
+        JLabel subtitulo = new JLabel("El Reino de Trodain", JLabel.CENTER);
+        subtitulo.setFont(new Font("Serif", Font.BOLD, 28));
+        subtitulo.setForeground(Color.WHITE);
+        subtitulo.setBounds(0, 140, getWidth(), 40);
+        panel.add(subtitulo);
+
         // ================= BOTONES RPG =================
         JLabel btnStart = crearBotonMenu("▶  Empezar aventura");
         btnStart.setBounds(50, 250, 400, 60);
@@ -54,7 +63,9 @@ public class VentanaInicio extends JFrame {
         btnStart.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                new VentanaBatalla(control);
+                musica.parar();
+                control.reiniciarPartida();                      // 💥 PARAR MÚSICA DEL MENÚ
+                new VentanaBatalla(control);          // abrir batalla
                 dispose();
             }
         });
@@ -67,11 +78,14 @@ public class VentanaInicio extends JFrame {
             }
         });
 
-        // Animación sutil de hover (solo desliza, sin brillo)
+        // Animación hover (solo deslizar)
         animacionHoverDeslizar(btnStart);
         animacionHoverDeslizar(btnSalir);
 
         setVisible(true);
+
+        // 💥 ESTA ES LA ÚNICA PARTE DONDE DEBE IR LA MÚSICA DEL MENÚ
+        musica.reproducirLoop("/sonidos/intro.wav");
     }
 
     // ====================== BOTÓN ESTILO RPG ======================

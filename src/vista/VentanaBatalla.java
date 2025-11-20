@@ -1,5 +1,6 @@
 package vista;
 
+import modelo.Musica;
 import controlador.ControlJuego;
 import modelo.Enemigo;
 import modelo.Habilidad;
@@ -62,6 +63,9 @@ public class VentanaBatalla extends JFrame {
 
         fondo = new ImageIcon(getClass().getResource("/foticos/bosque.jpg")).getImage();
 
+        // 🎵 AQUÍ VA — SOLO UNA VEZ
+        musicaBatalla.reproducirLoop("/sonidos/batalla.wav");
+
         construirInterfaz();
 
         Heroe actual = obtenerHeroeActual();
@@ -72,6 +76,8 @@ public class VentanaBatalla extends JFrame {
 
         setVisible(true);
     }
+
+    private Musica musicaBatalla = new Musica();
 
     // ===================== INTERFAZ =====================
 
@@ -547,6 +553,10 @@ public class VentanaBatalla extends JFrame {
             deshabilitarTodo();
             actualizarHeroes();
             cuadroTexto.setCaretPosition(cuadroTexto.getText().length());
+            musicaBatalla.parar();
+            new VentanaVictoria();
+            dispose();
+
             return;
         }
 
@@ -673,6 +683,9 @@ public class VentanaBatalla extends JFrame {
             deshabilitarTodo();
             actualizarHeroes();
             cuadroTexto.setCaretPosition(cuadroTexto.getText().length());
+            musicaBatalla.parar();
+            new VentanaVictoria();
+            dispose();
             return;
         }
 
@@ -698,6 +711,11 @@ public class VentanaBatalla extends JFrame {
         if (!hayVivos(heroes)) {
             cuadroTexto.append("\n💀 ¡TU EQUIPO HA SIDO DERROTADO!\n");
             deshabilitarTodo();
+            musicaBatalla.parar();
+            new VentanaDerrota();
+            dispose();
+            return;
+
         }
 
         actualizarHeroes();
